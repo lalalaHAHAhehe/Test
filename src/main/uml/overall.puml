@@ -1,0 +1,240 @@
+@startuml
+autonumber
+
+actor       User
+participant "User" as User
+
+box "Daraz" #LightYellow
+participant "Daraz App" as DarazApp
+participant "Daraz Backend" as DarazBackend
+end box
+
+box "Easypaisa" #LightBlue
+participant "EP H5" as EPH5 #LightGreen
+participant "Ep App" as EPApp #LightGreen
+participant "Ep Backend" as EPBackend #LightGreen
+participant "OPS" as OPS #LightGreen
+end box
+
+
+== User Binding ==
+User -> DarazApp: Add payment method & select Easypaisa
+activate DarazApp
+DarazApp -> DarazBackend: Add easypaisa payment method
+activate DarazBackend
+DarazBackend -> EPBackend: <font color=red>Initiate binding with authState,authRedirectUrl;/v1/authorizations/getPaymentAuthCode((auth prepare))
+activate EPBackend
+EPBackend -> EPBackend: Record preparation information and generate authID
+EPBackend -> EPBackend: Generate authUrl(deeplink) with authID
+EPBackend --> DarazBackend: Response authUrl(deeplink) with authID
+deactivate EPBackend
+DarazBackend --> DarazApp: Response universal link
+deactivate DarazBackend
+deactivate DarazApp
+alt Easypaisa app installed
+DarazApp -> EPH5: Open authUrl with authID(via H5 middle page)
+activate DarazApp
+activate EPH5
+EPH5 -> EPH5: Show middle page
+EPH5 -> EPApp: Open EP App
+deactivate EPH5
+activate EPApp
+EPApp -> EPApp: Login if need (existing login flow)
+User -> EPApp: Login with PIN/FaceID/Fingerprint
+EPApp -> EPApp: Risk check(Challenge may be initiated)
+alt If Risk initiates a challenge
+EPBackend -> EPBackend: send OTP to user MSISDN
+EPBackend --> EPApp: Response send result & need to verify status
+User -> EPApp: Enter the OTP received
+EPApp -> EPBackend: Verify OTP
+EPBackend --> EPApp: Response verify result
+end
+EPApp -> EPBackend: <font color=red>Get agreement info(Auth consult)
+EPBackend --> EPApp: Response agreement & Show agreement sign page
+User -> EPApp: Confirmation of agreement
+EPApp -> EPBackend: <font color=red>Auth confirm
+EPBackend -> EPBackend: Sign agreement
+EPBackend -> EPBackend: Generate paymentAuthCode
+
+EPBackend -> EPApp: Response paymentAuthCode
+EPApp -> EPApp: Show agreement signed successfully
+EPApp -> DarazApp: Jump back to Daraz by authRedirectUrl(get by step 3) with paymentAuthCode & authState
+deactivate EPApp
+end
+
+alt Easypaisa app not installed
+DarazApp -> EPH5: Open authUrl with authID(via H5 middle page)
+activate EPH5
+EPH5 -> EPH5: Show middle page
+EPH5 -> EPH5: Show login H5 page
+User -> EPH5:user enter MSISDN & PIN
+EPH5 -> EPBackend: Login
+EPBackend -> EPBackend: Login
+EPBackend -> EPBackend: Risk check(Challenge may be initiated)
+alt If Risk initiates a challenge
+EPBackend -> EPBackend: send OTP to user's MSISDN
+EPBackend --> EPH5: Response send result & need to verify status
+User -> EPH5: Input OTP
+EPH5 -> EPBackend: Verify OTP
+EPBackend --> EPH5: Response verify result
+end
+EPH5 -> EPBackend: <font color=red>Get agreement info(Auth consult)
+EPBackend --> EPH5: Response agreement & Show agreement sign page
+User -> EPH5: Confirmation of agreement
+EPH5 -> EPBackend: <font color=red>Auth confirm
+EPBackend -> EPBackend: Sign agreement
+EPBackend -> EPBackend: Generate paymentAuthCode
+
+EPBackend -> EPH5: Response paymentAuthCode
+EPH5 -> DarazApp: Jump back to Daraz by authRedirectUrl(get by step 3) with paymentAuthCode & authState
+deactivate EPH5
+
+end
+
+DarazApp -> DarazBackend: Apply token with paymentAuthCode
+
+DarazBackend -> EPBackend: <font color=red>Apply payement token with paymentAuthCode (/v1/authorizations/getPaymentToken)
+EPBackend -> OPS: Apply pinless token
+
+OPS -> OPS: Generate pinless Token
+OPS --> EPBackend: Response pinless Token
+EPBackend -> EPBackend: Generate PaymentToken、RefreshPaymentToken & related to pinless Token
+EPBackend --> DarazBackend: Response PaymentToken & RefreshPaymentToken
+DarazBackend -> DarazBackend: Save PaymentToken & RefreshPaymentToken
+DarazBackend --> DarazApp: Response success result
+
+
+== User Payment (A) ==
+autonumber
+User -> DarazApp: Open cashier page
+DarazApp -> DarazBackend: Initiate pre-check
+DarazBackend -> EPBackend:<font color=red>Initiate pre-check
+EPBackend -> EPBackend: Call EWP/OPS to check user balance & limit & account status
+alt If pre-check failure (user has a insufficient balance / limit / invalid status)
+EPBackend --> DarazBackend: Response check failure
+DarazBackend --> DarazApp: Disable the EP payment option
+end
+alt If pre-check success
+EPBackend --> DarazBackend: Response check success
+end
+
+User -> DarazApp: Choose to pay with EP
+DarazApp -> DarazBackend: pay with EP
+DarazBackend -> DarazBackend: Risk check
+
+alt Risk check result is failure
+DarazBackend --> DarazApp: Response transaction failure
+end
+alt Risk initiate a challenge
+DarazBackend -> EPBackend: <font color=red>Request send OTP API with paymentToken
+EPBackend -> EPBackend: Send OTP to user's MSISDN
+EPBackend --> DarazBackend:Response OTP send result & verifyRequestID
+DarazBackend -> DarazApp:Response OTP send result & verifyRequestID
+DarazApp -> DarazApp: Show OTP verify page
+User -> DarazApp:  Enter the OTP received
+DarazApp -> DarazBackend: Pass-through OTP
+DarazBackend -> EPBackend:<font color=red>Pass-through OTP & verifyRequestID
+EPBackend -> EPBackend:Verify OTP
+EPBackend --> DarazBackend: Response verify result
+end
+
+DarazBackend -> EPBackend:<font color=red> Initiate payment with paymentToken
+EPBackend -> EPBackend: Business check
+EPBackend -> EPBackend: Risk check
+
+alt Risk check result is failure
+EPBackend --> DarazBackend: Response Refuse the trade, this transaction is risky
+DarazBackend --> DarazApp: Response transaction failure
+end
+
+alt Risk initiate a challenge
+EPBackend --> DarazBackend: Response Refuse the trade, this transaction is risky
+DarazBackend --> DarazApp: Response transaction failure
+
+/' 首期不在EP做风控挑战，所以暂时忽略
+EPBackend -> EPBackend: Send OTP to user's MSISDN
+EPBackend --> DarazBackend: Response require user to enter OTP
+DarazBackend --> DarazApp: Response require user to enter OTP
+DarazApp -> DarazApp: Show OTP verification page
+User -> DarazApp: Enter the OTP received
+DarazApp -> DarazBackend: Pass-through OTP
+DarazBackend -> EPBackend:Pass-through OTP
+EPBackend -> EPBackend: Verify OTP
+'/
+end
+
+EPBackend -> OPS: Call the pinless API via pinless Token
+OPS -> OPS: Verify pinless Token and payment
+OPS -> EPBackend: Response payment result
+EPBackend --> DarazBackend: Response payment result
+DarazBackend --> DarazApp: Response payment result
+
+== User Payment (B) Not included in Phase 1 ==
+
+autonumber
+User -> DarazApp: Open cashier page
+DarazApp -> DarazBackend: Initiate pre-check
+DarazBackend -> EPBackend:Initiate pre-check
+EPBackend -> EPBackend: Call EWP/OPS to check user balance & limit & account status
+alt If pre-check failure (user has a insufficient balance / limit / invalid status)
+EPBackend --> DarazBackend: Response check failure
+DarazBackend --> DarazApp: Disable the EP payment option
+end
+alt If pre-check success
+EPBackend --> DarazBackend: Response check success
+end
+
+User -> DarazApp: Choose to pay with EP
+DarazApp -> DarazBackend: pay with EP
+DarazBackend -> DarazBackend: Risk check
+
+alt Risk check result is failure
+DarazBackend --> DarazApp: Response transaction failure
+end
+alt Risk initiate a challenge
+DarazBackend -> EPBackend: Request for challenge prepare with paymentToken & paymentInfo
+EPBackend -> EPBackend: Generate a paymentOrder a challengeUrl (relate to payment order )
+EPBackend --> DarazBackend: Response challengeUrl
+DarazBackend --> DarazApp:Response challengeUrl
+
+alt Easypaisa app installed
+DarazApp -> EPApp: Open challengeUrl (via H5 middle page)
+EPApp -> EPApp: Login if need (existing login flow)
+User -> EPApp: Login with PIN/FaceID/Fingerprint
+EPApp -> EPApp: Risk check（ignore）
+EPApp -> EPBackend: Payment consult
+EPBackend -> EPBackend: Compose payment detail
+EPBackend --> EPApp: Response payment detail
+EPApp -> EPApp: Show confirm payment page
+User -> EPApp: Confirm payment
+EPApp -> EPBackend:Payment
+EPBackend -> OPS: Call the pinless API via pinless Token
+OPS --> EPBackend:Response payment result
+EPBackend --> EPApp:Response payment result
+EPApp -> EPApp:Show payment result page
+EPApp -> DarazApp: Jump back to Daraz app
+end
+
+alt Easypaisa app not install
+DarazApp -> EPH5: Open challengeUrl (via H5 middle page)
+EPH5 -> EPH5: Show login H5 page
+User -> EPH5:user enter MSISDN & PIN
+EPH5 -> EPBackend: Login
+EPH5 -> EPH5: Risk check(100% OTP)
+EPH5 -> EPBackend: Payment consult
+EPBackend -> EPBackend: Compose payment detail
+EPBackend --> EPH5: Response payment detail
+EPH5 -> EPH5: Show confirm payment page
+User -> EPH5: Confirm payment
+EPH5 -> EPBackend:Payment
+EPBackend -> OPS: Call the pinless API via pinless Token
+OPS --> EPBackend:Response payment result
+EPBackend --> EPH5:Response payment result
+EPH5 -> EPH5:Show payment result page
+EPH5 -> DarazApp: Jump back to Daraz app
+end
+
+@enduml
+
+
+

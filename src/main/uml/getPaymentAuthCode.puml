@@ -1,0 +1,54 @@
+@startuml
+autonumber
+
+actor       User
+participant "User" as User
+
+box "Merchant" #LightYellow
+participant "Merchant APP" as MerchantAPP
+participant "Merchant Backend" as MerchantBackend
+end box
+
+box "Easypaisa" #LightBlue
+participant "EP H5" as EPH5 #LightGreen
+participant "EP App" as EPApp #LightGreen
+participant "EP Backend" as EPBackend #LightGreen
+end box
+
+== User Binding Flow ==
+User -> MerchantAPP: Add Easypaisa payment method
+activate MerchantAPP
+MerchantAPP -> MerchantBackend: Add Easypaisa payment method
+activate MerchantBackend
+MerchantBackend -> EPBackend: <font color=#f7a98d><b> Step1: Get PaymentAuthCode via /v2/authorizations/getPaymentAuthCode
+activate EPBackend
+EPBackend --> MerchantBackend: Response authUrl
+deactivate EPBackend
+MerchantBackend --> MerchantAPP: Response authUrl
+deactivate MerchantBackend
+deactivate MerchantAPP
+
+alt If EPApp installed
+MerchantAPP -> EPH5: <font color=#f7a98d><b> Step2: Open authUrl(H5 middle page)
+activate MerchantAPP
+activate EPH5
+EPH5 -> EPH5: Show middle page
+EPH5 -> EPApp: Open EP App
+deactivate EPH5
+activate EPApp
+deactivate EPBackend
+EPApp -> EPApp: Show sign page
+deactivate EPApp
+
+end
+
+alt If EPApp not installed
+MerchantAPP -> EPH5: <font color=#f7a98d><b> Step2: Open authUrl(H5 middle page)
+activate EPH5
+EPH5 -> EPH5: Show middle page
+EPH5 -> EPH5: Show sign page
+deactivate EPH5
+end
+
+
+@enduml

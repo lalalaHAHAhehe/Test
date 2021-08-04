@@ -1,0 +1,145 @@
+@startuml
+autonumber
+
+actor       User
+participant "User" as User
+
+box "Daraz" #LightYellow
+participant "Daraz App" as DarazApp
+participant "Daraz Backend" as DarazBackend
+end box
+
+box "Easypaisa" #LightBlue
+participant "EP H5" as EPH5 #LightGreen
+participant "EP App" as EPApp #LightGreen
+participant "EP Backend" as EPBackend #LightGreen
+participant "OPS" as OPS #LightGreen
+end box
+
+== User Binding ==
+User -> DarazApp: Add Easypaisa payment method
+activate DarazApp
+DarazApp -> DarazBackend: Add Easypaisa payment method
+activate DarazBackend
+DarazBackend -> EPBackend: Init binding(authState、authRedirectUrl)
+activate EPBackend
+EPBackend -> EPBackend: Record info(authState、authRedirectUrl)<font color=red><b>【PREPARED】
+EPBackend -> EPBackend: Generate authID、authUrl
+EPBackend --> DarazBackend: Response authUrl with authID
+deactivate EPBackend
+DarazBackend --> DarazApp: Response authUrl
+deactivate DarazBackend
+deactivate DarazApp
+
+alt If EPApp installed
+DarazApp -> EPH5: Open authUrl(H5 middle page)
+activate DarazApp
+activate EPH5
+EPH5 -> EPH5: Show middle page
+EPH5 -> EPApp: Open EP App
+deactivate EPH5
+activate EPApp
+EPApp -> EPApp: APP login if need(PIN、Fingerprint、FaceID;Risk OTP)(existing login flow)
+EPApp -> EPBackend: Get sign page(authID)
+activate EPBackend
+EPBackend ->EPBackend: Query agreement info
+EPBackend --> EPApp: Return sign page
+deactivate EPBackend
+EPApp -> EPApp: Show sign page
+User -> EPApp: Confirmation of agreement
+alt If cancel the agreement
+EPApp -> EPBackend: Cancel sign agreement
+activate EPBackend
+EPBackend -> EPBackend: Update binding status<font color=red><b>【CANCELED】
+EPBackend --> EPApp: Response update result
+deactivate EPBackend
+EPApp --> DarazApp: Jump back to DarazApp with authState
+end
+
+EPApp -> EPBackend: Sign agreement
+activate EPBackend
+EPBackend -> EPBackend: Generate paymentAuthCode
+EPBackend -> EPBackend: Record paymentAuthCode and EP userID
+EPBackend -> EPBackend: Update binding status<font color=red><b>【CONFIRMED】
+EPBackend --> EPApp: Response paymentAuthCode
+deactivate EPBackend
+EPApp -> EPApp: Show success page
+
+loop If not receive sign result after some time
+DarazApp -> EPBackend: Query paymentAuthCode(authState、scope)
+activate EPBackend
+EPBackend -> EPBackend: Query paymentAuthCode
+EPBackend --> DarazApp: Response result
+deactivate EPBackend
+end
+
+EPApp --> DarazApp: Jump back to DarazApp with paymentAuthCode and authState
+deactivate DarazApp
+deactivate EPApp
+end
+
+alt If EPApp not installed
+DarazApp -> EPH5: Open authUrl(H5 middle page)
+activate DarazApp
+activate EPH5
+EPH5 -> EPH5: Show middle page
+EPH5 -> EPH5: Redirect to login page
+EPH5 -> EPH5: H5 login (PIN、Fingerprint、FaceID;Risk OTP)
+EPH5 -> EPBackend: Get sign page(authID)
+activate EPBackend
+EPBackend ->EPBackend: Query agreement info
+EPBackend --> EPH5: Return sign page
+deactivate EPBackend
+EPH5 -> EPH5: Show sign page
+User -> EPH5: Confirmation of agreement
+alt If cancel the agreement
+EPH5 -> EPBackend: Cancel sign agreement
+activate EPBackend
+EPBackend -> EPBackend: Update binding status<font color=red><b>【CANCELED】
+EPBackend --> EPH5: Response update result
+deactivate EPBackend
+EPH5 --> DarazApp: Jump back to DarazApp with authState
+end
+
+EPH5 -> EPBackend: Sign agreement
+activate EPBackend
+EPBackend -> EPBackend: Generate paymentAuthCode
+EPBackend -> EPBackend: Record paymentAuthCode and EP userID
+EPBackend -> EPBackend: Update binding status<font color=red><b>【CONFIRMED】
+EPBackend --> EPH5: Response paymentAuthCode
+deactivate EPBackend
+EPH5 -> EPH5: Show success page
+
+loop If not receive sign result after some time
+DarazApp -> EPBackend: Query paymentAuthCode(authState、scope)
+activate EPBackend
+EPBackend -> EPBackend: Query paymentAuthCode
+EPBackend --> DarazApp: Response result
+deactivate EPBackend
+end
+
+EPH5 --> DarazApp: Jump back to DarazApp with paymentAuthCode
+deactivate EPH5
+deactivate DarazApp
+end
+
+DarazApp -> DarazBackend: Apply paymentToken(paymentAuthCode)
+activate DarazApp
+activate DarazBackend
+DarazBackend -> EPBackend: Apply paymentToken(paymentAuthCode)
+activate EPBackend
+EPBackend -> EPBackend: Verify paymentAuthCode
+EPBackend -> OPS: Apply pinLessToken
+activate OPS
+OPS -> OPS: Generate pinLessToken
+OPS --> EPBackend: Response pinLessToken
+deactivate OPS
+EPBackend -> EPBackend: Update binding status<font color=red><b>【TOKEN_GENERATED】
+EPBackend --> DarazBackend: Response paymentToken(pinLessToken‘s business name)
+deactivate EPBackend
+DarazBackend -> DarazBackend: Save paymentToken
+DarazBackend --> DarazApp: Return success
+deactivate DarazBackend
+deactivate DarazApp
+
+@enduml
