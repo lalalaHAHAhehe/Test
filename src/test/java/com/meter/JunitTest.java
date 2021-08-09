@@ -4,24 +4,24 @@ import org.junit.jupiter.api.Test;
 import org.springframework.util.Assert;
 
 //@SpringBootTest
-public class CoreTest {
+public class JunitTest {
 
     @Test
-    public void testTrue() {
+    public void junitTrue() {
         A.a();
         Assert.isTrue(true, "啦啦啦");
     }
 
     @Test
-    public void testFail() {
+    public void junitFail1() {
         A.a();
         Assert.isTrue(false, "错咯");
     }
 
     @Test
-    public void testFail2() {
+    public void junitFail2() {
         A.a();
-        Assert.isTrue(false, "错咯222");
+        Assert.isTrue(false, "错咯2");
     }
 
 }
