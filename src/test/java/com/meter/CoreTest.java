@@ -15,6 +15,7 @@ public class CoreTest {
 
     @Test
     public void testFail() {
+        A.a();
         Assert.isTrue(true, "错咯");
     }
 
