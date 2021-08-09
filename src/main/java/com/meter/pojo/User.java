@@ -1,4 +1,4 @@
-package com.meter;
+package com.meter.pojo;
 
 public class User {
 
