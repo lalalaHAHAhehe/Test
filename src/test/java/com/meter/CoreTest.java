@@ -9,6 +9,7 @@ public class CoreTest {
 
     @Test
     public void testTrue() {
+        A.a();
         Assert.isTrue(true, "啦啦啦");
     }
 
