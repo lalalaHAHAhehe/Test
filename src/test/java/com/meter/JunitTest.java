@@ -1,10 +1,13 @@
 package com.meter;
 
+import junit.framework.TestCase;
 import org.junit.jupiter.api.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 import org.springframework.util.Assert;
 
-//@SpringBootTest
-public class JunitTest {
+@RunWith(JUnit4.class)
+public class JunitTest extends TestCase {
 
     @Test
     public void junitTrue() {
