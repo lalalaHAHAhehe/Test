@@ -18,4 +18,10 @@ public class CoreTest {
         Assert.isTrue(false, "错咯");
     }
 
+    @Test
+    public void testFail2() {
+        A.a();
+        Assert.isTrue(false, "错咯222");
+    }
+
 }
