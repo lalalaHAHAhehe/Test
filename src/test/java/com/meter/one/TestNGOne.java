@@ -1,9 +1,9 @@
-package com.meter;
+package com.meter.one;
 
 import org.junit.jupiter.api.Assertions;
 import org.testng.annotations.Test;
 
-public class TestNG {
+public class TestNGOne {
 
     @Test
     public void success(){
