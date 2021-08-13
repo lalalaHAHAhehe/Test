@@ -10,4 +10,9 @@ public class A {
     public static void a(){
         System.out.println(123);
     }
+
+    public static void b(){
+        System.out.println(123);
+    }
+
 }
