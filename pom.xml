@@ -71,9 +71,8 @@
                 <configuration>
                     <skipTests>false</skipTests>
                     <testFailureIgnore>true</testFailureIgnore>
-                    <argLine> -Dfile.encoding=UTF-8</argLine>
+                    <argLine>@{argLine} -Dfile.encoding=UTF-8</argLine>
                     <includes>
-                        <!--<include>*\*\*\*Test.java</include>-->
                         <include>**\*</include>
                     </includes>
                 </configuration>
@@ -84,10 +83,6 @@
                 <version>0.8.7</version>
                 <configuration>
                     <skip>false</skip>
-                    <!--指定生成 .exec 文件的存放位置-->
-                    <destFile>target/coverage-reports/jacoco-unit.exec</destFile>
-                    <!--Jacoco 是根据 .exec 文件生成最终的报告，所以需指定 .exec 的存放路径-->
-                    <dataFile>target/coverage-reports/jacoco-unit.exec</dataFile>
                 </configuration>
                 <executions>
                     <execution>
