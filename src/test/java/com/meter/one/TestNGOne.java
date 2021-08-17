@@ -11,6 +11,7 @@ public class TestNGOne {
     @Test
     public void success(){
         System.out.println("JunitTest fail");
+        A.a();
         Assertions.assertTrue(true, "123");
     }
 
@@ -19,7 +20,6 @@ public class TestNGOne {
         System.out.println("JunitTest fail");
         log.info("1111.infoq11 kk");
         log.info("1111.infoq11 kk");
-        A.a();
         throw new RuntimeException("111");
     }
 
